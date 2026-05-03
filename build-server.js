@@ -1,0 +1,16 @@
+import * as esbuild from 'esbuild';
+import { createRequire } from 'module';
+
+await esbuild.build({
+  entryPoints: ['api/boot.ts'],
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  outdir: 'dist',
+  banner: {
+    js: 'import { createRequire } from "module";const require = createRequire(import.meta.url);',
+  },
+  external: ['esbuild', 'fsevents'],
+});
+
+console.log('Server build complete');

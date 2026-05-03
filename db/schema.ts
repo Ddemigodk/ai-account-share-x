@@ -1,76 +1,79 @@
 import {
-  mysqlTable,
-  serial,
-  varchar,
+  sqliteTable,
+  integer,
   text,
-  timestamp,
-  int,
-  json,
-  boolean,
-  mysqlEnum,
-  date,
-  bigint,
-} from "drizzle-orm/mysql-core";
+  blob,
+} from "drizzle-orm/sqlite-core";
 
 // 用户表
-export const users = mysqlTable("users", {
-  id: serial("id").primaryKey(),
-  username: varchar("username", { length: 50 }).notNull().unique(),
-  passwordHash: varchar("password_hash", { length: 255 }).notNull(),
-  displayName: varchar("display_name", { length: 100 }).notNull(),
-  role: mysqlEnum("role", ["admin", "member"]).notNull().default("member"),
-  level: int("level").notNull().default(1),
-  allowedCategories: json("allowed_categories").$type<number[]>(),
-  blockedAccounts: json("blocked_accounts").$type<number[]>(),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+export const users = sqliteTable("users", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  username: text("username", { length: 50 }).notNull().unique(),
+  passwordHash: text("password_hash", { length: 255 }).notNull(),
+  displayName: text("display_name", { length: 100 }).notNull(),
+  role: text("role", { length: 20 }).notNull().default("member"),
+  level: integer("level", { mode: "number" }).notNull().default(1),
+  allowedCategories: text("allowed_categories", { mode: "json" }).$type<number[]>(),
+  blockedAccounts: text("blocked_accounts", { mode: "json" }).$type<number[]>(),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 // AI工具类型表
-export const toolCategories = mysqlTable("tool_categories", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 100 }).notNull(),
-  icon: varchar("icon", { length: 50 }),
-  defaultMinLevel: int("default_min_level").notNull().default(1),
-  sortOrder: int("sort_order").notNull().default(0),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+export const toolCategories = sqliteTable("tool_categories", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  name: text("name", { length: 100 }).notNull(),
+  icon: text("icon", { length: 50 }),
+  defaultMinLevel: integer("default_min_level", { mode: "number" }).notNull().default(1),
+  sortOrder: integer("sort_order", { mode: "number" }).notNull().default(0),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
 // 资源账号表
-export const accounts = mysqlTable("accounts", {
-  id: serial("id").primaryKey(),
-  categoryId: bigint("category_id", { mode: "number", unsigned: true }).notNull(),
-  platform: varchar("platform", { length: 100 }).notNull(),
-  accountName: varchar("account_name", { length: 100 }).notNull(),
-  loginAccount: varchar("login_account", { length: 255 }).notNull(),
-  loginPassword: varchar("login_password", { length: 255 }).notNull(),
+export const accounts = sqliteTable("accounts", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  categoryId: integer("category_id", { mode: "number" }).notNull(),
+  platform: text("platform", { length: 100 }).notNull(),
+  accountName: text("account_name", { length: 100 }).notNull(),
+  loginAccount: text("login_account", { length: 255 }).notNull(),
+  loginPassword: text("login_password", { length: 255 }).notNull(),
   apiKey: text("api_key"),
-  status: mysqlEnum("status", ["available", "occupied"]).notNull().default("available"),
-  currentUserId: bigint("current_user_id", { mode: "number", unsigned: true }),
-  currentReservationId: bigint("current_reservation_id", { mode: "number", unsigned: true }),
-  minLevelRequired: int("min_level_required").notNull().default(1),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+  status: text("status", { length: 20 }).notNull().default("available"),
+  currentUserId: integer("current_user_id", { mode: "number" }),
+  currentReservationId: integer("current_reservation_id", { mode: "number" }),
+  minLevelRequired: integer("min_level_required", { mode: "number" }).notNull().default(1),
+  sortOrder: integer("sort_order", { mode: "number" }).notNull().default(0),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
 
-// 预约/占用记录表
-export const reservations = mysqlTable("reservations", {
-  id: serial("id").primaryKey(),
-  userId: bigint("user_id", { mode: "number", unsigned: true }).notNull(),
-  accountId: bigint("account_id", { mode: "number", unsigned: true }).notNull(),
-  date: date("date").notNull(),
-  timeSlot: mysqlEnum("time_slot", ["slot_1", "slot_2", "slot_3"]).notNull(),
-  status: mysqlEnum("status", ["active", "expired", "cancelled"]).notNull().default("active"),
-  startedAt: timestamp("started_at").notNull().defaultNow(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
+// 预约记录表
+export const reservations = sqliteTable("reservations", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  userId: integer("user_id", { mode: "number" }).notNull(),
+  accountId: integer("account_id", { mode: "number" }).notNull(),
+  period: text("period", { length: 20 }).notNull(),
+  startTime: integer("start_time", { mode: "timestamp" }).notNull(),
+  endTime: integer("end_time", { mode: "timestamp" }).notNull(),
+  status: text("status", { length: 20 }).notNull().default("active"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// 时段配置表
+export const periodConfigs = sqliteTable("period_configs", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  name: text("name", { length: 50 }).notNull(),
+  startTime: text("start_time", { length: 10 }).notNull(),
+  endTime: text("end_time", { length: 10 }).notNull(),
+  sortOrder: integer("sort_order", { mode: "number" }).notNull().default(0),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
 });
 
 // 系统设置表
-export const settings = mysqlTable("settings", {
-  id: serial("id").primaryKey(),
-  key: varchar("key", { length: 100 }).notNull().unique(),
-  value: text("value").notNull(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+export const settings = sqliteTable("settings", {
+  id: integer("id", { mode: "number" }).primaryKey({ autoIncrement: true }),
+  key: text("key", { length: 100 }).notNull().unique(),
+  value: text("value"),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });

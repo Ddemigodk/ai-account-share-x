@@ -14,10 +14,6 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
     fields: [accounts.categoryId],
     references: [toolCategories.id],
   }),
-  currentUser: one(users, {
-    fields: [accounts.currentUserId],
-    references: [users.id],
-  }),
   reservations: many(reservations),
 }));
 

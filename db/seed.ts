@@ -1,35 +1,41 @@
-import { getDb } from "../api/queries/connection";
-import { users, toolCategories, accounts } from "./schema";
+import { db } from "../api/queries/connection";
+import { users, toolCategories, accounts, periodConfigs, settings } from "./schema";
 import bcrypt from "bcryptjs";
 
 async function seed() {
-  const db = getDb();
   console.log("Seeding database...");
+
+  // 清空现有数据
+  await db.delete(accounts);
+  await db.delete(toolCategories);
+  await db.delete(users);
+  await db.delete(periodConfigs);
+  await db.delete(settings);
 
   // 创建管理员账号
   const adminPasswordHash = await bcrypt.hash("admin123", 10);
-  const [adminResult] = await db.insert(users).values({
+  const adminResult = await db.insert(users).values({
     username: "admin",
     passwordHash: adminPasswordHash,
     displayName: "管理员",
     role: "admin",
     level: 5,
     allowedCategories: [],
-  });
-  console.log("Created admin user:", adminResult.insertId);
+  }).returning();
+  console.log("Created admin user:", adminResult[0].id);
 
   // 创建示例成员
   const memberPasswordHash = await bcrypt.hash("member123", 10);
   for (let i = 1; i <= 5; i++) {
-    const [result] = await db.insert(users).values({
+    const result = await db.insert(users).values({
       username: `member${i}`,
       passwordHash: memberPasswordHash,
       displayName: `成员${i}`,
       role: "member",
       level: i > 3 ? 3 : i,
       allowedCategories: [],
-    });
-    console.log(`Created member${i}:`, result.insertId);
+    }).returning();
+    console.log(`Created member${i}:`, result[0].id);
   }
 
   // 创建工具类型
@@ -43,9 +49,9 @@ async function seed() {
 
   const categoryIds: number[] = [];
   for (const cat of categories) {
-    const [result] = await db.insert(toolCategories).values(cat);
-    categoryIds.push(Number(result.insertId));
-    console.log(`Created category ${cat.name}:`, result.insertId);
+    const result = await db.insert(toolCategories).values(cat).returning();
+    categoryIds.push(result[0].id);
+    console.log(`Created category ${cat.name}:`, result[0].id);
   }
 
   // 创建示例账号
@@ -61,16 +67,33 @@ async function seed() {
   ];
 
   for (const acc of accountData) {
-    const [result] = await db.insert(accounts).values(acc);
-    console.log(`Created account ${acc.accountName}:`, result.insertId);
+    const result = await db.insert(accounts).values(acc).returning();
+    console.log(`Created account ${acc.accountName}:`, result[0].id);
   }
 
-  console.log("Seeding complete!");
-  console.log("");
-  console.log("=== 默认登录账号 ===");
-  console.log("管理员: admin / admin123");
-  console.log("成员: member1~member5 / member123");
+  // 创建时段配置
+  const periods = [
+    { name: "上午场", startTime: "09:00", endTime: "14:00", sortOrder: 1 },
+    { name: "下午场", startTime: "14:00", endTime: "18:00", sortOrder: 2 },
+    { name: "晚场", startTime: "18:00", endTime: "24:00", sortOrder: 3 },
+  ];
+  for (const p of periods) {
+    await db.insert(periodConfigs).values(p);
+    console.log(`Created period ${p.name}`);
+  }
+
+  // 系统设置
+  await db.insert(settings).values([
+    { key: "site_name", value: "AI账号共享系统" },
+    { key: "release_interval", value: "60" },
+  ]);
+  console.log("Created settings");
+
+  console.log("Seed complete!");
   process.exit(0);
 }
 
-seed();
+seed().catch((err) => {
+  console.error("Seed failed:", err);
+  process.exit(1);
+});

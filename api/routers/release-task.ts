@@ -19,7 +19,7 @@ export async function releaseExpiredReservations() {
       .where(
         and(
           eq(reservations.status, "active"),
-          lte(reservations.expiresAt, now),
+          lte(reservations.endTime, now),
         ),
       );
 
